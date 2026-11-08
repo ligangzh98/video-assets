@@ -1,0 +1,7 @@
+{
+  "demoRef": {
+    "filename": "1.mp3",
+    "refText": "变量这个词，劝退了多少想学编程的人。"
+  },
+  "_comment": "refText 必须与 1.mp3 里说的每一个字完全一致，克隆才稳。改完后重启 breeze_demo_server.py。"
+}

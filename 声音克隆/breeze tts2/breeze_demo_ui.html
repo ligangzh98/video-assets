@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Breeze TTS 2 本地演示：声音设计、克隆与方向" />
+  <title>Breeze TTS 2 · 本地演示台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #100f0d;
+      --bg-elevated: #181614;
+      --surface: #1f1c19;
+      --surface-hover: #262220;
+      --border: #3a3530;
+      --border-soft: #2a2724;
+      --text: #f2ebe3;
+      --text-secondary: #a89f94;
+      --text-tertiary: #736b62;
+      --accent: #d4a574;
+      --accent-hover: #e2b88a;
+      --accent-muted: rgba(212, 165, 116, 0.12);
+      --ok: #8fbfa3;
+      --warn: #d4a574;
+      --danger: #e07a7a;
+      --shadow: 0 24px 48px rgba(8, 6, 4, 0.45);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --font: "Outfit", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --sidebar-w: 15.5rem;
+      --output-w: 22rem;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 400;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100dvh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      z-index: 0;
+    }
+
+    .skip {
+      position: absolute;
+      left: -9999px;
+      top: 0.75rem;
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      z-index: 100;
+    }
+    .skip:focus {
+      left: 0.75rem;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: 100dvh;
+    }
+
+    /* —— Sidebar —— */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 1rem 1.5rem 1.25rem;
+      border-right: 1px solid var(--border-soft);
+      background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+    }
+
+    .brand {
+      margin-bottom: 2rem;
+      padding-right: 0.5rem;
+    }
+
+    .brand-kicker {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin: 0 0 0.35rem;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      text-wrap: balance;
+    }
+
+    .brand p {
+      margin: 0.5rem 0 0;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      max-width: 14rem;
+      line-height: 1.45;
+    }
+
+    .mode-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex: 1;
+    }
+
+    .mode-nav button {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.15rem;
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.22s var(--ease), border-color 0.22s var(--ease), color 0.22s var(--ease), transform 0.15s var(--ease);
+    }
+
+    .mode-nav button:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .mode-nav button:active {
+      transform: scale(0.98);
+    }
+
+    .mode-nav button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .mode-nav button.active {
+      background: var(--accent-muted);
+      border-color: rgba(212, 165, 116, 0.35);
+      color: var(--text);
+    }
+
+    .mode-nav .mode-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+    }
+
+    .mode-nav .mode-desc {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-tertiary);
+      line-height: 1.35;
+    }
+
+    .mode-nav button.active .mode-desc {
+      color: var(--text-secondary);
+    }
+
+    .status-card {
+      margin-top: auto;
+      padding: 0.85rem 0.9rem;
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+    }
+
+    .status-label {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 0.35rem;
+    }
+
+    #status {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    #status.ready { color: var(--ok); }
+    #status.busy { color: var(--warn); }
+
+    .status-dot {
+      display: inline-block;
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      margin-right: 0.35rem;
+      vertical-align: 0.05em;
+    }
+
+    #status.ready .status-dot { background: var(--ok); box-shadow: 0 0 8px rgba(143, 191, 163, 0.5); }
+    #status.busy .status-dot { background: var(--warn); animation: pulse 1s ease infinite; }
+
+    @keyframes pulse {
+      50% { opacity: 0.45; }
+    }
+
+    /* —— Workspace —— */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr var(--output-w);
+      min-width: 0;
+    }
+
+    .editor {
+      padding: 1.75rem 2rem 2.5rem;
+      max-width: 42rem;
+    }
+
+    .panel-header {
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.4s var(--ease) both;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    .panel-header p {
+      margin: 0.4rem 0 0;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      max-width: 36ch;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+      animation: fadeUp 0.35s var(--ease) both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .field {
+      margin-bottom: 1.15rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    .field textarea,
+    .field input[type="text"],
+    .field input[type="number"] {
+      width: 100%;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9375rem;
+      transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    }
+
+    .field textarea {
+      min-height: 5rem;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .field textarea:focus,
+    .field input:focus {
+      outline: none;
+      border-color: rgba(212, 165, 116, 0.55);
+      box-shadow: 0 0 0 3px var(--accent-muted);
+    }
+
+    .hint {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      margin-top: 0.35rem;
+      line-height: 1.4;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .cfg-field input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      margin-top: 0.25rem;
+    }
+
+    .cfg-value {
+      font-family: var(--mono);
+      font-size: 0.8125rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* File drop */
+    .dropzone {
+      position: relative;
+      padding: 1.25rem 1rem;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.22s var(--ease), background 0.22s var(--ease);
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: rgba(212, 165, 116, 0.5);
+      background: var(--accent-muted);
+    }
+
+    .dropzone:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .dropzone-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .dropzone-sub {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+    }
+
+    .dropzone-name {
+      display: block;
+      margin-top: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--ok);
+      word-break: break-all;
+    }
+
+    .dropzone-name:empty { display: none; }
+
+    .demo-strip {
+      margin-bottom: 1.35rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+    }
+
+    .demo-strip-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin: 0 0 0.55rem;
+    }
+
+    .demo-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    button.demo-chip {
+      padding: 0.4rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--bg);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+    }
+
+    button.demo-chip:hover {
+      border-color: rgba(212, 165, 116, 0.45);
+      color: var(--text);
+      background: var(--accent-muted);
+    }
+
+    button.demo-chip:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    button.demo-chip.active {
+      border-color: rgba(212, 165, 116, 0.55);
+      background: var(--accent-muted);
+      color: var(--text);
+    }
+
+    .demo-strip-hint {
+      margin: 0.55rem 0 0;
+      font-size: 0.6875rem;
+      color: var(--text-tertiary);
+      line-height: 1.4;
+    }
+
+    .ref-mode-note {
+      display: block;
+      margin-top: 0.45rem;
+      font-family: var(--mono);
+      font-size: 0.6875rem;
+      color: var(--ok);
+    }
+
+    .ref-mode-note:empty { display: none; }
+
+    .actions {
+      margin-top: 1.75rem;
+      padding-top: 0.25rem;
+    }
+
+    button.primary {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--accent);
+      color: #1a1510;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.22s var(--ease), transform 0.15s var(--ease), box-shadow 0.22s var(--ease);
+      box-shadow: 0 4px 20px rgba(212, 165, 116, 0.25);
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 28px rgba(212, 165, 116, 0.32);
+    }
+
+    button.primary:active:not(:disabled) {
+      transform: scale(0.98) translateY(1px);
+    }
+
+    button.primary:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 3px;
+    }
+
+    button.primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* —— Output panel —— */
+    .output {
+      border-left: 1px solid var(--border-soft);
+      background: var(--bg-elevated);
+      padding: 1.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+    }
+
+    .output-head {
+      margin-bottom: 1rem;
+    }
+
+    .output-head h2 {
+      margin: 0;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    .output-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #result {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      padding: 1.1rem;
+      box-shadow: var(--shadow);
+    }
+
+    #result[hidden] {
+      display: none !important;
+    }
+
+    #result.is-empty .output-filled { display: none; }
+    #result:not(.is-empty) .output-empty { display: none; }
+
+    .output-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.5rem 0.5rem;
+      color: var(--text-tertiary);
+    }
+
+    .wave-icon {
+      width: 4.5rem;
+      height: 2.5rem;
+      margin-bottom: 1rem;
+      opacity: 0.35;
+    }
+
+    .output-empty p {
+      margin: 0;
+      font-size: 0.8125rem;
+      max-width: 16rem;
+      line-height: 1.45;
+    }
+
+    .output-filled h3 {
+      margin: 0 0 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    audio {
+      width: 100%;
+      margin-bottom: 1rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .metrics {
+      display: grid;
+      gap: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.6875rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-secondary);
+    }
+
+    .metrics div {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .metrics span:last-child { color: var(--text); }
+
+    #meta:empty { display: none; }
+
+    .error {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: var(--radius-sm);
+      background: rgba(224, 122, 122, 0.1);
+      border: 1px solid rgba(224, 122, 122, 0.35);
+      color: var(--danger);
+      font-size: 0.8125rem;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    #err[hidden] { display: none; }
+
+    .skeleton {
+      display: none;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-bottom: 1rem;
+    }
+
+    #result.is-loading .skeleton { display: flex; }
+    #result.is-loading .output-filled > *:not(.skeleton) { visibility: hidden; height: 0; margin: 0; overflow: hidden; }
+
+    .sk-line {
+      height: 0.65rem;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--border-soft) 25%, var(--surface-hover) 50%, var(--border-soft) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s ease infinite;
+    }
+
+    .sk-line.wide { width: 100%; }
+    .sk-line.mid { width: 72%; }
+    .sk-line.short { width: 45%; }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    body.load-locked { overflow: hidden; }
+
+    .load-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      background: rgba(12, 10, 8, 0.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      transition: opacity 0.28s var(--ease);
+    }
+
+    .load-overlay.is-open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .load-dialog {
+      position: relative;
+      width: min(22rem, 100%);
+      padding: 1.75rem 1.5rem 1.35rem;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(145deg, #252019 0%, #1a1714 55%, #141210 100%);
+      border: 1px solid rgba(212, 165, 116, 0.28);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+        0 32px 64px rgba(6, 4, 2, 0.55),
+        0 0 48px rgba(212, 165, 116, 0.08);
+      text-align: center;
+      transform: scale(0.92) translateY(12px);
+      transition: transform 0.32s var(--ease);
+      overflow: hidden;
+    }
+
+    .load-overlay.is-open .load-dialog {
+      transform: scale(1) translateY(0);
+    }
+
+    .load-dialog::before {
+      content: "";
+      position: absolute;
+      top: -40%;
+      left: -20%;
+      width: 140%;
+      height: 80%;
+      background: radial-gradient(ellipse, rgba(212, 165, 116, 0.14) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .load-floats {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .load-tag {
+      position: absolute;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--accent);
+      opacity: 0.35;
+      animation: tagDrift 4s var(--ease) infinite;
+    }
+
+    .load-tag:nth-child(1) { top: 12%; left: 8%; animation-delay: 0s; }
+    .load-tag:nth-child(2) { top: 18%; right: 10%; animation-delay: 0.7s; }
+    .load-tag:nth-child(3) { bottom: 22%; left: 12%; animation-delay: 1.4s; }
+    .load-tag:nth-child(4) { bottom: 14%; right: 8%; animation-delay: 2.1s; }
+
+    @keyframes tagDrift {
+      0%, 100% { transform: translateY(0) rotate(-3deg); opacity: 0.2; }
+      50% { transform: translateY(-6px) rotate(3deg); opacity: 0.45; }
+    }
+
+    .load-visual {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 5px;
+      height: 3.25rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .load-bar {
+      width: 6px;
+      border-radius: 3px;
+      background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%);
+      box-shadow: 0 0 12px rgba(212, 165, 116, 0.35);
+      animation: barBounce 0.85s ease-in-out infinite;
+      transform-origin: bottom center;
+    }
+
+    .load-bar:nth-child(1) { height: 28%; animation-delay: 0s; }
+    .load-bar:nth-child(2) { height: 55%; animation-delay: 0.1s; }
+    .load-bar:nth-child(3) { height: 100%; animation-delay: 0.05s; }
+    .load-bar:nth-child(4) { height: 70%; animation-delay: 0.15s; }
+    .load-bar:nth-child(5) { height: 40%; animation-delay: 0.08s; }
+    .load-bar:nth-child(6) { height: 85%; animation-delay: 0.12s; }
+    .load-bar:nth-child(7) { height: 50%; animation-delay: 0.18s; }
+
+    @keyframes barBounce {
+      0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+      50% { transform: scaleY(1); opacity: 1; }
+    }
+
+    .load-mouth {
+      position: absolute;
+      bottom: -2px;
+      width: 2.5rem;
+      height: 0.65rem;
+      border: 2px solid rgba(212, 165, 116, 0.45);
+      border-top: none;
+      border-radius: 0 0 1.25rem 1.25rem;
+      animation: mouthTalk 0.45s ease-in-out infinite alternate;
+    }
+
+    @keyframes mouthTalk {
+      from { transform: scaleX(0.85); }
+      to { transform: scaleX(1.08); }
+    }
+
+    #load-title {
+      position: relative;
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    #load-msg {
+      position: relative;
+      margin: 0 0 1rem;
+      min-height: 2.6em;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      transition: opacity 0.2s var(--ease);
+    }
+
+    #load-msg.is-fading { opacity: 0; }
+
+    .load-timer {
+      position: relative;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-tertiary);
+    }
+
+    .load-timer span {
+      color: var(--accent);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .load-bar, .load-mouth, .load-tag { animation: none; }
+      .load-bar { transform: scaleY(0.7); opacity: 0.8; }
+      .load-dialog { transition: none; }
+      .load-overlay { transition: none; }
+    }
+
+    @media (max-width: 960px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border-soft);
+        padding-bottom: 1rem;
+      }
+      .mode-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+      }
+      .mode-nav button {
+        min-width: 8.5rem;
+        flex-shrink: 0;
+      }
+      .status-card { margin-top: 1rem; }
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .output {
+        position: static;
+        height: auto;
+        border-left: none;
+        border-top: 1px solid var(--border-soft);
+      }
+      .editor {
+        padding: 1.25rem 1rem;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">跳到编辑区</a>
+
+  <div class="app">
+    <aside class="sidebar" aria-label="演示模式">
+      <div class="brand">
+        <p class="brand-kicker">本地 MLX · 常驻模型</p>
+        <h1>Breeze TTS 2 演示台</h1>
+        <p>模型已在内存中，合成通常只需 1～3 秒。</p>
+      </div>
+
+      <nav class="mode-nav" role="tablist" aria-label="功能模式">
+        <button type="button" role="tab" aria-selected="true" aria-controls="panel-design" id="tab-design" class="active" data-tab="design">
+          <span class="mode-title">声音设计</span>
+          <span class="mode-desc">文字描述音色，无需参考音频</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="panel-clone" id="tab-clone" data-tab="clone">
+          <span class="mode-title">声音克隆</span>
+          <span class="mode-desc">参考 WAV + 逐字稿还原声线</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="panel-direction" id="tab-direction" data-tab="direction">
+          <span class="mode-title">声音方向</span>
+          <span class="mode-desc">保留参考音色，调整语气与节奏</span>
+        </button>
+      </nav>
+
+      <div class="status-card">
+        <div class="status-label">服务状态</div>
+        <div id="status"><span class="status-dot" aria-hidden="true"></span>检查连接…</div>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <div class="editor">
+        <main id="main">
+          <section id="panel-design" class="panel active" role="tabpanel" aria-labelledby="tab-design">
+            <header class="panel-header">
+              <h2>声音设计</h2>
+              <p>用自然语言描述说话人，直接合成正文。</p>
+            </header>
+            <div class="demo-strip" data-demo-panel="design">
+              <p class="demo-strip-title">演示案例 · 点击填入</p>
+              <div class="demo-chips" id="demo-chips-design"></div>
+              <p class="demo-strip-hint">填好后直接点「生成语音」，无需手打。</p>
+            </div>
+            <div class="field">
+              <label for="design-text">合成正文</label>
+              <textarea id="design-text" spellcheck="false">[笑] 好的呀，谢谢你。</textarea>
+              <span class="hint">中文：[笑]、[叹气] · 英文：(sigh)、(laugh)</span>
+            </div>
+            <div class="field">
+              <label for="design-instruct">声音描述（instruct）</label>
+              <textarea id="design-instruct" spellcheck="false">一位温柔自信的年轻女性，声音清晰，语气亲切，表达轻快而富有感染力。</textarea>
+            </div>
+            <div class="field-row">
+              <div class="field cfg-field">
+                <label for="design-cfg">cfg_scale · <span class="cfg-value" id="design-cfg-val">4</span></label>
+                <input id="design-cfg" type="range" min="1" max="6" step="0.5" value="4" aria-valuetext="4" />
+              </div>
+              <div class="field">
+                <label for="design-prefix">文件名前缀</label>
+                <input id="design-prefix" type="text" value="breeze_design" spellcheck="false" />
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="primary" id="btn-design">生成语音</button>
+            </div>
+          </section>
+
+          <section id="panel-clone" class="panel" role="tabpanel" aria-labelledby="tab-clone" hidden>
+            <header class="panel-header">
+              <h2>声音克隆</h2>
+              <p>参考稿必须与音频内容完全一致。</p>
+            </header>
+            <div class="demo-strip" data-demo-panel="clone">
+              <p class="demo-strip-title">演示案例 · 点击填入</p>
+              <div class="demo-chips" id="demo-chips-clone"></div>
+              <p class="demo-strip-hint">带「演示参考」的案例会自动用服务器上的 1.mp3，无需每次上传。</p>
+            </div>
+            <div class="field">
+              <label for="clone-ref">参考音频</label>
+              <div class="dropzone" id="drop-clone" tabindex="0" role="button" aria-label="上传参考 WAV">
+                <input id="clone-ref" type="file" accept="audio/*,.wav" />
+                <span class="dropzone-title">拖放或点击选择 WAV</span>
+                <span class="dropzone-sub">建议 3～15 秒、单人干声</span>
+                <span class="dropzone-name" id="clone-ref-name"></span>
+                <span class="ref-mode-note" id="clone-ref-note"></span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="clone-ref-text">参考稿</label>
+              <textarea id="clone-ref-text" placeholder="参考里说的每一个字…" spellcheck="false"></textarea>
+            </div>
+            <div class="field">
+              <label for="clone-text">合成正文</label>
+              <textarea id="clone-text" spellcheck="false">[叹气] 没想到过了这么久，你还记得我的声音。</textarea>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="clone-voice">voice</label>
+                <input id="clone-voice" type="text" value="S0" spellcheck="false" />
+              </div>
+              <div class="field">
+                <label for="clone-prefix">文件名前缀</label>
+                <input id="clone-prefix" type="text" value="breeze_clone" spellcheck="false" />
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="primary" id="btn-clone">克隆并生成</button>
+            </div>
+          </section>
+
+          <section id="panel-direction" class="panel" role="tabpanel" aria-labelledby="tab-direction" hidden>
+            <header class="panel-header">
+              <h2>声音方向</h2>
+              <p>同一参考音色，用指令改变演绎方式。</p>
+            </header>
+            <div class="demo-strip" data-demo-panel="direction">
+              <p class="demo-strip-title">演示案例 · 点击填入</p>
+              <div class="demo-chips" id="demo-chips-direction"></div>
+              <p class="demo-strip-hint">可与克隆共用演示参考音；改 instruct 听同一张嘴的不同讲法。</p>
+            </div>
+            <div class="field">
+              <label for="dir-ref">参考音频</label>
+              <div class="dropzone" id="drop-dir" tabindex="0" role="button" aria-label="上传参考 WAV">
+                <input id="dir-ref" type="file" accept="audio/*,.wav" />
+                <span class="dropzone-title">拖放或点击选择 WAV</span>
+                <span class="dropzone-sub">与克隆相同质量要求</span>
+                <span class="dropzone-name" id="dir-ref-name"></span>
+                <span class="ref-mode-note" id="dir-ref-note"></span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="dir-ref-text">参考稿</label>
+              <textarea id="dir-ref-text" spellcheck="false"></textarea>
+            </div>
+            <div class="field">
+              <label for="dir-instruct">方向指令</label>
+              <textarea id="dir-instruct" spellcheck="false">语气更慢、更沉稳，像深夜电台。</textarea>
+            </div>
+            <div class="field">
+              <label for="dir-text">合成正文</label>
+              <textarea id="dir-text" spellcheck="false">我们今晚慢慢聊。</textarea>
+            </div>
+            <div class="field-row">
+              <div class="field cfg-field">
+                <label for="dir-cfg">cfg_scale · <span class="cfg-value" id="dir-cfg-val">4</span></label>
+                <input id="dir-cfg" type="range" min="1" max="6" step="0.5" value="4" />
+              </div>
+              <div class="field">
+                <label for="dir-prefix">文件名前缀</label>
+                <input id="dir-prefix" type="text" value="breeze_direction" spellcheck="false" />
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="primary" id="btn-direction">生成语音</button>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <aside class="output" aria-label="生成结果">
+        <div class="output-head">
+          <h2>输出</h2>
+        </div>
+        <div class="output-body">
+          <div id="result" class="is-empty">
+            <div class="output-empty">
+              <svg class="wave-icon" viewBox="0 0 80 32" fill="none" aria-hidden="true">
+                <path d="M0 16 Q10 4 20 16 T40 16 T60 16 T80 16" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M0 20 Q10 28 20 20 T40 20 T60 20 T80 20" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.6"/>
+              </svg>
+              <p>完成一次合成后，音频会出现在这里并自动保存到服务器目录。</p>
+            </div>
+            <div class="output-filled">
+              <div class="skeleton" aria-hidden="true">
+                <div class="sk-line wide"></div>
+                <div class="sk-line mid"></div>
+                <div class="sk-line short"></div>
+              </div>
+              <h3>最新一条</h3>
+              <audio id="player" controls></audio>
+              <div class="metrics" id="meta"></div>
+              <p class="error" id="err" hidden role="alert"></p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="load-overlay" class="load-overlay" aria-hidden="true">
+    <div class="load-dialog" role="dialog" aria-modal="true" aria-labelledby="load-title" aria-describedby="load-msg">
+      <div class="load-floats" aria-hidden="true">
+        <span class="load-tag">[笑]</span>
+        <span class="load-tag">(sigh)</span>
+        <span class="load-tag">[叹气]</span>
+        <span class="load-tag">S0</span>
+      </div>
+      <div class="load-visual" aria-hidden="true">
+        <span class="load-bar"></span>
+        <span class="load-bar"></span>
+        <span class="load-bar"></span>
+        <span class="load-bar"></span>
+        <span class="load-bar"></span>
+        <span class="load-bar"></span>
+        <span class="load-bar"></span>
+        <span class="load-mouth"></span>
+      </div>
+      <h2 id="load-title">正在合成</h2>
+      <p id="load-msg">模型已在内存里，这次不用搬权重。</p>
+      <p class="load-timer">已等待 <span id="load-elapsed">0.0</span>s</p>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const resultEl = $("result");
+    const player = $("player");
+    const metaEl = $("meta");
+    const errEl = $("err");
+    let busy = false;
+    const loadOverlay = $("load-overlay");
+    const loadMsgEl = $("load-msg");
+    const loadElapsedEl = $("load-elapsed");
+    let loadElapsedTimer = null;
+    let loadMsgTimer = null;
+    let loadStart = 0;
+
+    const LOAD_TITLES = {
+      design: "在设计声音",
+      clone: "在克隆声线",
+      direction: "在调整演绎",
+    };
+
+    const LOAD_LINES = {
+      design: [
+        "用 instruct 描述音色，模型正在对号入座。",
+        "给括号里的 [笑] 找合适的嘴型。",
+        "CFG 正在说服模型：请听用户的。",
+        "声码器小步快跑，24 kHz 马上到。",
+      ],
+      clone: [
+        "对照参考稿逐字核对，差一个字都不行。",
+        "从参考 WAV 里提取声纹指纹。",
+        "这次不用重新加载权重，省下来的都在推理里。",
+        "克隆模式：不加 instruct，只还原你。",
+      ],
+      direction: [
+        "参考音色留着，语气按你的指令改。",
+        "同一张嘴，换一种讲法。",
+        "instruct 和 ref 正在开会对齐。",
+        "深夜电台模式加载中……开玩笑的，看你怎么写 instruct。",
+      ],
+    };
+
+    const DEMO_CASES = {
+      design: [
+        {
+          id: "d1",
+          label: "温柔女声 · [笑]",
+          text: "[笑] 好的呀，谢谢你。",
+          instruct: "一位温柔自信的年轻女性，声音清晰，语气亲切，表达轻快而富有感染力。",
+          cfg: 4,
+          prefix: "demo_design_warm",
+        },
+        {
+          id: "d2",
+          label: "科普解说",
+          text: "今天我们在本地实测 Breeze TTS 2，听感以耳朵为准。",
+          instruct: "年轻男性，音色干净，语速中等，像科技频道解说。",
+          cfg: 4,
+          prefix: "demo_design_tech",
+        },
+        {
+          id: "d3",
+          label: "英文 · (sigh)",
+          text: "(sigh) It is good to hear your voice again after all this time.",
+          instruct: "A calm adult female speaker, clear and natural American English.",
+          cfg: 4,
+          prefix: "demo_design_en",
+        },
+        {
+          id: "d4",
+          label: "活泼短句",
+          text: "[笑] 没想到效果还不错，我们接着测下一个模式。",
+          instruct: "二十出头女生，语气活泼，略快，像在跟朋友说好消息。",
+          cfg: 4,
+          prefix: "demo_design_lively",
+        },
+      ],
+      clone: [
+        {
+          id: "c1",
+          label: "克隆 · [叹气] 经典句",
+          useDemoRef: true,
+          text: "[叹气] 没想到过了这么久，你还记得我的声音。",
+          prefix: "demo_clone_sigh",
+        },
+        {
+          id: "c2",
+          label: "克隆 · 解说开场",
+          useDemoRef: true,
+          text: "今天我们在本地测 Breeze TTS 2 的克隆效果，这是同一张嘴在说话。",
+          prefix: "demo_clone_intro",
+        },
+        {
+          id: "c3",
+          label: "克隆 · 无标签平读",
+          useDemoRef: true,
+          text: "没想到过了这么久，你还记得我的声音。",
+          prefix: "demo_clone_plain",
+        },
+        {
+          id: "c4",
+          label: "克隆 · 多情绪标签",
+          useDemoRef: true,
+          text: "[清嗓子] 各位观众好，[笑] 下面开始实测。",
+          prefix: "demo_clone_tags",
+        },
+      ],
+      direction: [
+        {
+          id: "r1",
+          label: "方向 · 深夜电台",
+          useDemoRef: true,
+          instruct: "语气更慢、更沉稳，像深夜电台，留白多一点。",
+          text: "我们今晚慢慢聊，不着急把话说完。",
+          cfg: 4,
+          prefix: "demo_dir_radio",
+        },
+        {
+          id: "r2",
+          label: "方向 · 严肃通知",
+          useDemoRef: true,
+          instruct: "慢速，克制，严肃，像在说重要通知，不要开玩笑。",
+          text: "请注意，下面这条说明与许可协议有关。",
+          cfg: 4,
+          prefix: "demo_dir_serious",
+        },
+        {
+          id: "r3",
+          label: "方向 · 同句更活泼",
+          useDemoRef: true,
+          instruct: "更快一点，更兴奋，像在录短视频口播。",
+          text: "没想到过了这么久，你还记得我的声音。",
+          cfg: 4,
+          prefix: "demo_dir_hype",
+        },
+        {
+          id: "r4",
+          label: "方向 · 英文 restrained",
+          useDemoRef: true,
+          instruct: "Speak slowly with a restrained, serious tone.",
+          text: "We need to discuss what happened last night.",
+          cfg: 4,
+          prefix: "demo_dir_en",
+        },
+      ],
+    };
+
+    let demoRefServerPath = null;
+    let demoRefFilename = "1.mp3";
+    let demoRefTextDefault = "";
+    let cloneUseServerRef = false;
+    let dirUseServerRef = false;
+
+    function renderDemoChips() {
+      (["design", "clone", "direction"]).forEach((mode) => {
+        const wrap = $("demo-chips-" + mode);
+        if (!wrap) return;
+        wrap.innerHTML = "";
+        (DEMO_CASES[mode] || []).forEach((item) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "demo-chip";
+          btn.textContent = item.label;
+          btn.dataset.id = item.id;
+          btn.addEventListener("click", () => applyDemoCase(mode, item.id));
+          wrap.appendChild(btn);
+        });
+      });
+    }
+
+    function setServerRefMode(mode, on) {
+      if (mode === "clone") {
+        cloneUseServerRef = on;
+        const note = $("clone-ref-note");
+        if (on && demoRefServerPath) {
+          note.textContent = "演示参考：" + demoRefFilename + "（服务器，无需上传）";
+          $("clone-ref-name").textContent = "";
+          $("clone-ref").value = "";
+        } else {
+          note.textContent = "";
+        }
+      }
+      if (mode === "direction") {
+        dirUseServerRef = on;
+        const note = $("dir-ref-note");
+        if (on && demoRefServerPath) {
+          note.textContent = "演示参考：" + demoRefFilename + "（服务器，无需上传）";
+          $("dir-ref-name").textContent = "";
+          $("dir-ref").value = "";
+        } else {
+          note.textContent = "";
+        }
+      }
+    }
+
+    function applyDemoCase(mode, id) {
+      const list = DEMO_CASES[mode] || [];
+      const item = list.find((x) => x.id === id);
+      if (!item) return;
+
+      document.querySelectorAll("#demo-chips-" + mode + " .demo-chip").forEach((el) => {
+        el.classList.toggle("active", el.dataset.id === id);
+      });
+
+      if (mode === "design") {
+        if (item.text != null) $("design-text").value = item.text;
+        if (item.instruct != null) $("design-instruct").value = item.instruct;
+        if (item.cfg != null) {
+          $("design-cfg").value = String(item.cfg);
+          $("design-cfg-val").textContent = String(item.cfg);
+          $("design-cfg").setAttribute("aria-valuetext", String(item.cfg));
+        }
+        if (item.prefix != null) $("design-prefix").value = item.prefix;
+        return;
+      }
+
+      if (mode === "clone") {
+        const refText = item.refText != null ? item.refText : demoRefTextDefault;
+        if (refText) $("clone-ref-text").value = refText;
+        if (item.text != null) $("clone-text").value = item.text;
+        if (item.voice != null) $("clone-voice").value = item.voice;
+        if (item.prefix != null) $("clone-prefix").value = item.prefix;
+        setServerRefMode("clone", !!item.useDemoRef && !!demoRefServerPath);
+        if (item.useDemoRef && !demoRefServerPath) {
+          showError("演示参考音未就绪：请确认脚本目录存在 1.mp3 并已重启服务");
+        } else {
+          showError("");
+        }
+        return;
+      }
+
+      if (mode === "direction") {
+        const refText = item.refText != null ? item.refText : demoRefTextDefault;
+        if (refText) $("dir-ref-text").value = refText;
+        if (item.instruct != null) $("dir-instruct").value = item.instruct;
+        if (item.text != null) $("dir-text").value = item.text;
+        if (item.cfg != null) {
+          $("dir-cfg").value = String(item.cfg);
+          $("dir-cfg-val").textContent = String(item.cfg);
+        }
+        if (item.prefix != null) $("dir-prefix").value = item.prefix;
+        setServerRefMode("direction", !!item.useDemoRef && !!demoRefServerPath);
+        if (item.useDemoRef && !demoRefServerPath) {
+          showError("演示参考音未就绪：请确认脚本目录存在 1.mp3 并已重启服务");
+        } else {
+          showError("");
+        }
+      }
+    }
+
+    async function loadDemoConfig() {
+      try {
+        const r = await fetch("/api/demo-config");
+        if (r.ok) {
+          const j = await r.json();
+          if (j.demoRef && j.demoRef.serverPath) demoRefServerPath = j.demoRef.serverPath;
+          if (j.demoRef && j.demoRef.filename) demoRefFilename = j.demoRef.filename;
+          if (j.demoRef && j.demoRef.refText) demoRefTextDefault = j.demoRef.refText;
+        }
+      } catch {
+        /* 未启动服务时忽略 */
+      }
+      renderDemoChips();
+    }
+
+    const tabButtons = document.querySelectorAll(".mode-nav button");
+    const panels = document.querySelectorAll(".panel");
+
+    function selectTab(tabId) {
+      tabButtons.forEach((btn) => {
+        const on = btn.dataset.tab === tabId;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      panels.forEach((panel) => {
+        const on = panel.id === "panel-" + tabId;
+        panel.classList.toggle("active", on);
+        panel.hidden = !on;
+      });
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => selectTab(btn.dataset.tab));
+    });
+
+    function bindCfgRange(rangeId, labelId) {
+      const range = $(rangeId);
+      const label = $(labelId);
+      const sync = () => {
+        label.textContent = range.value;
+        range.setAttribute("aria-valuetext", range.value);
+      };
+      range.addEventListener("input", sync);
+      sync();
+    }
+    bindCfgRange("design-cfg", "design-cfg-val");
+    bindCfgRange("dir-cfg", "dir-cfg-val");
+
+    function bindDropzone(dropId, inputId, nameId, refMode) {
+      const zone = $(dropId);
+      const input = $(inputId);
+      const nameEl = $(nameId);
+
+      const showName = () => {
+        const f = input.files[0];
+        nameEl.textContent = f ? f.name : "";
+        if (f && refMode) setServerRefMode(refMode, false);
+      };
+
+      input.addEventListener("change", showName);
+
+      ["dragenter", "dragover"].forEach((ev) => {
+        zone.addEventListener(ev, (e) => {
+          e.preventDefault();
+          zone.classList.add("dragover");
+        });
+      });
+      ["dragleave", "drop"].forEach((ev) => {
+        zone.addEventListener(ev, (e) => {
+          e.preventDefault();
+          zone.classList.remove("dragover");
+        });
+      });
+      zone.addEventListener("drop", (e) => {
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          input.files = e.dataTransfer.files;
+          showName();
+        }
+      });
+      zone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          input.click();
+        }
+      });
+    }
+    bindDropzone("drop-clone", "clone-ref", "clone-ref-name", "clone");
+    bindDropzone("drop-dir", "dir-ref", "dir-ref-name", "direction");
+
+    loadDemoConfig();
+
+    async function refreshHealth() {
+      if (busy) return;
+      try {
+        const r = await fetch("/health");
+        const j = await r.json();
+        const dot = '<span class="status-dot" aria-hidden="true"></span>';
+        if (j.ok) {
+          statusEl.innerHTML = `${dot}就绪 · 加载 ${j.load_seconds}s · 已合成 ${j.requests} 次`;
+          statusEl.className = "ready";
+        } else {
+          statusEl.innerHTML = `${dot}模型加载中…`;
+          statusEl.className = "";
+        }
+      } catch {
+        statusEl.innerHTML = '<span class="status-dot" aria-hidden="true"></span>未连接 · 请先启动 breeze_demo_server.py';
+        statusEl.className = "";
+      }
+    }
+    refreshHealth();
+    setInterval(refreshHealth, 8000);
+
+    function pickLoadLine(mode) {
+      const pool = LOAD_LINES[mode] || LOAD_LINES.design;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function cycleLoadMessage(mode) {
+      loadMsgEl.classList.add("is-fading");
+      setTimeout(() => {
+        loadMsgEl.textContent = pickLoadLine(mode);
+        loadMsgEl.classList.remove("is-fading");
+      }, 180);
+    }
+
+    function startLoadOverlay(mode) {
+      $("load-title").textContent = LOAD_TITLES[mode] || "正在合成";
+      loadMsgEl.textContent = pickLoadLine(mode);
+      loadMsgEl.classList.remove("is-fading");
+      loadStart = performance.now();
+      loadElapsedEl.textContent = "0.0";
+      requestAnimationFrame(() => loadOverlay.classList.add("is-open"));
+      loadOverlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("load-locked");
+
+      loadElapsedTimer = setInterval(() => {
+        loadElapsedEl.textContent = ((performance.now() - loadStart) / 1000).toFixed(1);
+      }, 100);
+
+      loadMsgTimer = setInterval(() => cycleLoadMessage(mode), 2400);
+    }
+
+    function stopLoadOverlay() {
+      if (loadMsgTimer) {
+        clearInterval(loadMsgTimer);
+        loadMsgTimer = null;
+      }
+      if (loadElapsedTimer) {
+        clearInterval(loadElapsedTimer);
+        loadElapsedTimer = null;
+      }
+      loadOverlay.classList.remove("is-open");
+      loadOverlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("load-locked");
+    }
+
+    function setBusy(v, mode = "design") {
+      busy = v;
+      ["btn-design", "btn-clone", "btn-direction"].forEach((id) => {
+        $(id).disabled = v;
+      });
+      resultEl.classList.toggle("is-loading", v);
+      if (v) {
+        statusEl.innerHTML = '<span class="status-dot" aria-hidden="true"></span>合成中…';
+        statusEl.className = "busy";
+        startLoadOverlay(mode);
+      } else {
+        stopLoadOverlay();
+        refreshHealth();
+      }
+    }
+
+    function showError(msg) {
+      errEl.hidden = !msg;
+      errEl.textContent = msg || "";
+    }
+
+    function renderMetrics(wallMs, res) {
+      metaEl.innerHTML = "";
+      const pt = res.headers.get("X-Processing-Time-S");
+      const iw = res.headers.get("X-Inference-Wall-S");
+      const rows = [];
+      if (wallMs != null) rows.push(["浏览器计时", `${(wallMs / 1000).toFixed(2)} s`]);
+      if (pt) rows.push(["Processing time", `${pt} s`]);
+      if (iw) rows.push(["推理墙钟", `${iw} s`]);
+      if (!rows.length) rows.push(["保存", "已写入服务器 output 目录"]);
+      rows.forEach(([k, v]) => {
+        const row = document.createElement("div");
+        row.innerHTML = `<span>${k}</span><span>${v}</span>`;
+        metaEl.appendChild(row);
+      });
+    }
+
+    async function handleAudioResponse(res, wallMs) {
+      showError("");
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || res.statusText);
+      }
+      const blob = await res.blob();
+      if (player.src && player.src.startsWith("blob:")) URL.revokeObjectURL(player.src);
+      player.src = URL.createObjectURL(blob);
+      resultEl.classList.remove("is-empty", "is-loading");
+      resultEl.hidden = false;
+      renderMetrics(wallMs, res);
+      await refreshHealth();
+    }
+
+    $("btn-design").addEventListener("click", async () => {
+      if (busy) return;
+      setBusy(true, "design");
+      resultEl.hidden = false;
+      const t0 = performance.now();
+      try {
+        const res = await fetch("/api/design", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: $("design-text").value.trim(),
+            instruct: $("design-instruct").value.trim(),
+            cfg_scale: parseFloat($("design-cfg").value) || 4,
+            file_prefix: $("design-prefix").value.trim() || "breeze_design",
+            return_file: true,
+          }),
+        });
+        await handleAudioResponse(res, performance.now() - t0);
+      } catch (e) {
+        showError(String(e.message || e));
+        resultEl.classList.remove("is-loading");
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    async function postMultipart(url, form) {
+      const t0 = performance.now();
+      const res = await fetch(url, { method: "POST", body: form });
+      await handleAudioResponse(res, performance.now() - t0);
+    }
+
+    $("btn-clone").addEventListener("click", async () => {
+      if (busy) return;
+      const file = $("clone-ref").files[0];
+      const useServer = cloneUseServerRef && demoRefServerPath;
+      if (!file && !useServer) {
+        showError("请选择参考音频，或点上方演示案例（自动用 1.mp3）");
+        resultEl.hidden = false;
+        resultEl.classList.remove("is-empty");
+        return;
+      }
+      if (!$("clone-ref-text").value.trim()) {
+        showError("请填写参考稿，或与 1.mp3 内容一致的逐字稿");
+        resultEl.hidden = false;
+        resultEl.classList.remove("is-empty");
+        return;
+      }
+      setBusy(true, "clone");
+      resultEl.hidden = false;
+      try {
+        const form = new FormData();
+        form.append("text", $("clone-text").value.trim());
+        form.append("ref_text", $("clone-ref-text").value.trim());
+        if (useServer) {
+          form.append("ref_audio_path", demoRefServerPath);
+        } else {
+          form.append("ref_audio", file);
+        }
+        form.append("voice", $("clone-voice").value.trim() || "S0");
+        form.append("file_prefix", $("clone-prefix").value.trim() || "breeze_clone");
+        form.append("return_file", "true");
+        await postMultipart("/api/clone", form);
+      } catch (e) {
+        showError(String(e.message || e));
+        resultEl.classList.remove("is-loading");
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    $("btn-direction").addEventListener("click", async () => {
+      if (busy) return;
+      const file = $("dir-ref").files[0];
+      const useServer = dirUseServerRef && demoRefServerPath;
+      if (!file && !useServer) {
+        showError("请选择参考音频，或点上方演示案例（自动用 1.mp3）");
+        resultEl.hidden = false;
+        resultEl.classList.remove("is-empty");
+        return;
+      }
+      if (!$("dir-ref-text").value.trim()) {
+        showError("请填写参考稿");
+        resultEl.hidden = false;
+        resultEl.classList.remove("is-empty");
+        return;
+      }
+      setBusy(true, "direction");
+      resultEl.hidden = false;
+      try {
+        const form = new FormData();
+        form.append("text", $("dir-text").value.trim());
+        form.append("instruct", $("dir-instruct").value.trim());
+        form.append("ref_text", $("dir-ref-text").value.trim());
+        if (useServer) {
+          form.append("ref_audio_path", demoRefServerPath);
+        } else {
+          form.append("ref_audio", file);
+        }
+        form.append("cfg_scale", $("dir-cfg").value || "4");
+        form.append("voice", "S0");
+        form.append("file_prefix", $("dir-prefix").value.trim() || "breeze_direction");
+        form.append("return_file", "true");
+        await postMultipart("/api/direction/form", form);
+      } catch (e) {
+        showError(String(e.message || e));
+        resultEl.classList.remove("is-loading");
+      } finally {
+        setBusy(false);
+      }
+    });
+  </script>
+</body>
+</html>
