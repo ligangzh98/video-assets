@@ -22,9 +22,7 @@ Apple Silicon + **mlx-audio** 常驻服务：网页演示**声音设计 / 克隆
 ## 快速开始
 
 ```bash
-cd "/Users/lynn/Desktop/Projects/ligangzh98/video-assets/声音克隆/breeze tts2"
 # 建议先激活你的 Python 虚拟环境
-
 python breeze_demo_server.py --warmup --open
 ```
 
